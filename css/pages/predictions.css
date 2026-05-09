@@ -1,0 +1,557 @@
+.predictions-page {
+  min-height: 70vh;
+}
+
+.page-hero {
+  padding: 64px 0 28px;
+  border-bottom: 1px solid var(--border);
+  background:
+    radial-gradient(circle at 15% 10%, rgba(108, 99, 255, 0.16), transparent 28rem),
+    radial-gradient(circle at 85% 20%, rgba(0, 200, 150, 0.09), transparent 20rem);
+}
+
+.page-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 22px;
+  align-items: end;
+}
+
+.page-hero h1 {
+  font-size: clamp(2.45rem, 6vw, 5.2rem);
+}
+
+.page-hero p:not(.eyebrow) {
+  max-width: 690px;
+  margin: 16px 0 0;
+  color: var(--text-secondary);
+  font-size: 1.06rem;
+}
+
+.status-panel {
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+
+.last-updated {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.setup-banner {
+  margin-top: 28px;
+  padding: 22px;
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius);
+  background: var(--accent-glow);
+}
+
+.setup-banner h2 {
+  margin: 0 0 8px;
+}
+
+.setup-banner p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.setup-banner code {
+  color: var(--accent-bright);
+}
+
+.controls-shell {
+  padding: 24px 0 0;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(19, 19, 31, 0.72);
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.sort-control select {
+  min-height: 42px;
+  padding: 0 38px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.sentiment-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab-button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 800;
+  transition: color var(--transition), background var(--transition), border-color var(--transition);
+}
+
+.tab-button:hover,
+.tab-button.is-active {
+  border-color: var(--border-accent);
+  background: var(--accent-glow);
+  color: var(--text-primary);
+}
+
+.predictions-shell {
+  padding: 24px 0 88px;
+}
+
+.coins-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.prediction-card {
+  position: relative;
+  min-height: 430px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)), var(--bg-card);
+  transition: transform var(--transition), box-shadow var(--transition), background var(--transition), border-color var(--transition);
+}
+
+.prediction-card:hover {
+  transform: translateY(-4px);
+  background: var(--bg-card-hover);
+  border-color: var(--border-accent);
+  box-shadow: 0 24px 70px var(--accent-glow);
+}
+
+.prediction-card.is-expanded {
+  border-color: var(--border-accent);
+}
+
+.prediction-card.has-error,
+.error-card {
+  border-left: 3px solid var(--red);
+}
+
+.prediction-card.is-refreshing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  animation: shimmer 1.1s infinite;
+}
+
+.card-button {
+  width: 100%;
+  min-height: 430px;
+  padding: 22px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.coin-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.coin-logo {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  aspect-ratio: 1;
+  border: 1px solid var(--border-accent);
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2), transparent 28%), var(--accent-glow);
+  color: var(--text-primary);
+  font-weight: 900;
+  font-size: 0.82rem;
+}
+
+.coin-logo.bullish {
+  background-color: var(--green-glow);
+  border-color: rgba(0, 200, 150, 0.3);
+}
+
+.coin-logo.bearish {
+  background-color: var(--red-glow);
+  border-color: rgba(255, 71, 87, 0.3);
+}
+
+.coin-title {
+  min-width: 0;
+}
+
+.coin-title strong {
+  display: block;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.coin-title span {
+  display: block;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.refresh-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+
+.refresh-button:hover {
+  border-color: var(--border-accent);
+  background: var(--accent-glow);
+  color: var(--text-primary);
+}
+
+.refresh-button.loading .refresh-icon {
+  animation: spin 0.85s linear infinite;
+}
+
+.price-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.current-price {
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.change-badge,
+.sentiment-badge,
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.positive {
+  background: var(--green-glow);
+  color: var(--green);
+}
+
+.negative {
+  background: var(--red-glow);
+  color: var(--red);
+}
+
+.neutral {
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text-secondary);
+}
+
+.divider {
+  height: 1px;
+  margin: 22px 0;
+  background: var(--border);
+}
+
+.section-label {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.prediction-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.prediction-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.prediction-row .timeframe {
+  color: var(--text-muted);
+  font-weight: 900;
+}
+
+.prediction-row .prediction-price {
+  font-weight: 800;
+}
+
+.prediction-row .prediction-delta {
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.confidence-block {
+  margin-top: 18px;
+}
+
+.confidence-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.confidence-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.confidence-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  animation: fillBar 0.85s ease forwards;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.source-badge {
+  background: rgba(108, 99, 255, 0.12);
+  color: var(--accent-bright);
+}
+
+.expanded-panel {
+  max-height: 0;
+  overflow: hidden;
+  border-top: 1px solid transparent;
+  transition: max-height 0.35s ease, border-color var(--transition);
+}
+
+.prediction-card.is-expanded .expanded-panel {
+  max-height: 680px;
+  border-color: var(--border);
+}
+
+.expanded-inner {
+  display: grid;
+  gap: 16px;
+  padding: 0 22px 22px;
+}
+
+.reasoning-block h3 {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reasoning-block p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.close-card {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.card-error-panel {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid rgba(255, 71, 87, 0.24);
+  border-radius: var(--radius-sm);
+  background: var(--red-glow);
+  color: var(--text-primary);
+}
+
+.retry-button {
+  min-height: 36px;
+  margin-top: 10px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 71, 87, 0.32);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 71, 87, 0.1);
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.skeleton-card {
+  min-height: 430px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.skeleton-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.skeleton-avatar {
+  width: 48px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 999px;
+}
+
+.skeleton-wide {
+  width: 100%;
+}
+
+.skeleton-mid {
+  width: 58%;
+}
+
+.skeleton-short {
+  width: 34%;
+}
+
+.skeleton-stack {
+  display: grid;
+  gap: 14px;
+}
+
+@keyframes fillBar {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: var(--confidence-width, 0%);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1080px) {
+  .coins-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .page-hero-grid,
+  .filter-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .page-hero-grid {
+    display: grid;
+  }
+
+  .status-panel {
+    justify-items: start;
+  }
+
+  .filter-bar {
+    display: grid;
+  }
+
+  .sort-control {
+    display: grid;
+  }
+
+  .sentiment-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .coins-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .card-button {
+    padding: 18px;
+  }
+
+  .price-row {
+    display: grid;
+    align-items: start;
+  }
+
+  .prediction-row {
+    grid-template-columns: 40px 1fr;
+  }
+
+  .prediction-row .prediction-delta {
+    grid-column: 2;
+  }
+}

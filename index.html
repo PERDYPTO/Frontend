@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Perdypto is an AI-powered crypto price prediction platform for short-term market analysis.">
+  <title>Perdypto | AI Crypto Price Predictions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages/home.css">
+</head>
+<body data-page="home">
+  <header class="site-nav" data-navbar>
+    <a class="brand" href="index.html" aria-label="Perdypto home">
+      <span class="brand-text">Perdypto</span>
+      <span class="brand-bolt" aria-hidden="true">⚡</span>
+    </a>
+    <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-controls="primary-navigation" aria-expanded="false" data-nav-toggle>
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="nav-links" id="primary-navigation" data-nav-menu>
+      <a href="predictions.html" data-nav-link="predictions">Predictions</a>
+      <a href="tos.html" data-nav-link="tos">TOS</a>
+      <a href="privacy.html" data-nav-link="privacy">Privacy Policy</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-blob hero-blob-one" aria-hidden="true"></div>
+      <div class="hero-blob hero-blob-two" aria-hidden="true"></div>
+      <div class="hero-blob hero-blob-three" aria-hidden="true"></div>
+
+      <div class="floating-coins" aria-hidden="true">
+        <span class="coin coin-btc">BTC</span>
+        <span class="coin coin-eth">ETH</span>
+        <span class="coin coin-sol">SOL</span>
+      </div>
+
+      <div class="container hero-content">
+        <p class="eyebrow">Deep reasoning for volatile markets</p>
+        <h1 id="hero-title">Predict. Analyze. Trade Smarter.</h1>
+        <p class="hero-copy">AI-powered crypto price predictions combining real-time technical analysis, live market news and deep reasoning models. Not financial advice.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="predictions.html">View Predictions</a>
+          <a class="btn btn-secondary" href="#how-it-works">Learn More</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section how-section" id="how-it-works" aria-labelledby="how-title">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Signal pipeline</p>
+          <h2 id="how-title">How It Works</h2>
+        </div>
+        <div class="steps-grid">
+          <article class="step-card">
+            <div class="step-icon" aria-hidden="true">📡</div>
+            <h3>Live Data</h3>
+            <p>We fetch real-time price data and OHLCV candles from Binance and OKX</p>
+          </article>
+          <article class="step-card">
+            <div class="step-icon" aria-hidden="true">🤖</div>
+            <h3>AI Analysis</h3>
+            <p>Technical indicators and market news are analyzed by specialized AI models</p>
+          </article>
+          <article class="step-card">
+            <div class="step-icon" aria-hidden="true">🧠</div>
+            <h3>Deep Reasoning</h3>
+            <p>DeepSeek V4 Pro synthesizes everything to produce price predictions</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="disclaimer-banner" aria-label="Important disclaimer">
+      <div class="container">
+        <strong>⚠️ Perdypto predictions are for informational purposes only and do not constitute financial advice. Crypto markets are highly volatile and unpredictable. You may lose money. Always do your own research.</strong>
+      </div>
+    </section>
+
+    <section class="section preview-section" aria-labelledby="preview-title">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Live preview</p>
+          <h2 id="preview-title">Market Cards Loading In</h2>
+        </div>
+        <div class="preview-grid" data-preview-grid aria-label="Sample prediction cards"></div>
+        <div class="center-actions">
+          <a class="btn btn-primary" href="predictions.html">See All Predictions →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="index.html" aria-label="Perdypto home">
+          <span class="brand-text">Perdypto</span>
+          <span class="brand-bolt" aria-hidden="true">⚡</span>
+        </a>
+        <p>AI-powered crypto prediction intelligence for fast-moving markets.</p>
+      </div>
+      <div class="footer-column">
+        <h2>Quick Links</h2>
+        <a href="index.html">Home</a>
+        <a href="predictions.html">Predictions</a>
+        <a href="index.html#how-it-works">How It Works</a>
+      </div>
+      <div class="footer-column">
+        <h2>Legal</h2>
+        <a href="tos.html">Terms of Service</a>
+        <a href="privacy.html">Privacy Policy</a>
+      </div>
+      <div class="footer-column footer-disclaimer">
+        <h2>Disclaimer</h2>
+        <p>Perdypto provides AI-generated price predictions for informational and entertainment purposes only. These predictions are not financial advice. Crypto markets are highly volatile. Never invest more than you can afford to lose. Past prediction accuracy does not guarantee future results.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2025 Perdypto. All rights reserved. Not a financial service.</div>
+  </footer>
+
+  <script src="js/pages.js" defer></script>
+  <script src="js/home.js" defer></script>
+</body>
+</html>
