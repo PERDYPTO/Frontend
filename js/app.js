@@ -17,6 +17,7 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
   const grid = document.querySelector("[data-coins-grid]");
   const setupBanner = document.querySelector("[data-setup-banner]");
   const controls = document.querySelector("[data-controls]");
+  const pipelineStatus = document.querySelector("[data-pipeline-status]");
   const sortSelect = document.querySelector("[data-sort-select]");
   const filterButtons = document.querySelectorAll("[data-filter]");
   const lastUpdated = document.querySelector("[data-last-updated]");
@@ -31,8 +32,11 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     filter: "all",
     sort: "confidence-desc",
     lastUpdatedAt: null,
-    priceUpdatedAt: null
+    priceUpdatedAt: null,
+    directLivePrices: new Map()
   };
+
+  let directPricePollInFlight = false;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -47,6 +51,14 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     return `${ORCHESTRATOR_URL.replace(/\/$/, "")}${path}`;
   }
 
+  function setPipelineStatus(message, tone = "info") {
+    if (!pipelineStatus) return;
+
+    pipelineStatus.textContent = message || "";
+    pipelineStatus.dataset.statusTone = tone;
+    pipelineStatus.classList.toggle("is-hidden", !message);
+  }
+
   function formatPrice(value) {
     const number = Number(value);
     if (!Number.isFinite(number)) return "N/A";
@@ -58,6 +70,14 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     }).format(number);
+  }
+
+  function okxInstrumentId(coinId) {
+    const symbol = String(coinId || "").toUpperCase();
+    const quote = ["USDT", "USDC", "USD"].find((suffix) => symbol.endsWith(suffix));
+    if (!quote) return symbol;
+
+    return `${symbol.slice(0, -quote.length)}-${quote}`;
   }
 
   function formatPercent(value) {
@@ -219,6 +239,8 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     const source = record.fromCache ? "CACHED" : "LIVE";
     const confidenceText = `${Math.round(record.confidence)}%`;
     const error = state.errors.get(record.id);
+    const displayedCurrentPrice = state.directLivePrices.get(record.id) ?? record.currentPrice;
+    const lastPriceValue = Number.isFinite(Number(displayedCurrentPrice)) ? String(Number(displayedCurrentPrice)) : "";
 
     return `
       <article class="prediction-card ${isExpanded ? "is-expanded" : ""} ${isLoading ? "is-refreshing" : ""} ${error ? "has-error" : ""}" data-coin-id="${escapeHtml(record.id)}" aria-expanded="${String(isExpanded)}">
@@ -236,7 +258,7 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
 
           <div class="price-row">
             <div>
-              <div class="current-price">${formatPrice(record.currentPrice)}</div>
+              <div class="current-price" data-live-price="${escapeHtml(record.id)}" data-last-price="${escapeHtml(lastPriceValue)}">${formatPrice(displayedCurrentPrice)}</div>
               <div class="last-updated">At prediction ${formatPrice(record.priceAtPrediction)}</div>
               <div class="last-updated">24h volume ${formatVolume(record.volume24h)}</div>
             </div>
@@ -360,6 +382,169 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     record.delta1h = predictionDelta(record.predicted1h, record.currentPrice);
   }
 
+  async function fetchBinanceTickerPrice(coinId) {
+    const symbol = encodeURIComponent(String(coinId || "").toUpperCase());
+    const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`, {
+      cache: "no-store"
+    });
+    if (!response.ok) throw new Error("Binance price fetch failed");
+
+    const payload = await response.json();
+    const price = Number(payload.price);
+    if (!Number.isFinite(price)) throw new Error("Binance returned an invalid price");
+    return price;
+  }
+
+  async function fetchOkxTickerPrice(coinId) {
+    const instId = encodeURIComponent(okxInstrumentId(coinId));
+    const response = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${instId}`, {
+      cache: "no-store"
+    });
+    if (!response.ok) throw new Error("OKX price fetch failed");
+
+    const payload = await response.json();
+    const price = Number(payload?.data?.[0]?.last);
+    if (!Number.isFinite(price)) throw new Error("OKX returned an invalid price");
+    return price;
+  }
+
+  async function fetchDirectTickerPrice(coinId) {
+    try {
+      return await fetchBinanceTickerPrice(coinId);
+    } catch (error) {
+      return fetchOkxTickerPrice(coinId);
+    }
+  }
+
+  function flashLivePrice(element) {
+    element.classList.remove("is-live-price-updated");
+    void element.offsetWidth;
+    element.classList.add("is-live-price-updated");
+
+    window.setTimeout(() => {
+      element.classList.remove("is-live-price-updated");
+    }, 700);
+  }
+
+  function updateLivePriceElement(element, price) {
+    const nextText = formatPrice(price);
+    const previousText = element.textContent;
+
+    element.textContent = nextText;
+    element.dataset.lastPrice = String(price);
+
+    if (previousText && previousText !== nextText) {
+      flashLivePrice(element);
+    }
+  }
+
+  function visibleLivePriceGroups() {
+    return Array.from(grid.querySelectorAll("[data-live-price]")).reduce((groups, element) => {
+      const coinId = element.dataset.livePrice;
+      if (!coinId) return groups;
+
+      if (!groups.has(coinId)) groups.set(coinId, []);
+      groups.get(coinId).push(element);
+      return groups;
+    }, new Map());
+  }
+
+  async function pollVisibleLivePrices() {
+    if (directPricePollInFlight || document.hidden) return;
+
+    const priceGroups = visibleLivePriceGroups();
+    if (priceGroups.size === 0) return;
+
+    directPricePollInFlight = true;
+
+    try {
+      await Promise.all(Array.from(priceGroups.entries()).map(async ([coinId, elements]) => {
+        try {
+          const price = await fetchDirectTickerPrice(coinId);
+          state.directLivePrices.set(coinId, price);
+          elements.forEach((element) => {
+            if (element.isConnected) updateLivePriceElement(element, price);
+          });
+        } catch (error) {
+          // Direct exchange polling is intentionally silent; the cached prediction UI remains unchanged.
+        }
+      }));
+    } finally {
+      directPricePollInFlight = false;
+    }
+  }
+
+  function applyPredictionPayload(payload) {
+    const nextRecords = new Map();
+
+    Object.entries(payload).forEach(([coinId, result]) => {
+      const record = normalizeResult(coinId, result);
+      nextRecords.set(record.id, record);
+    });
+
+    if (nextRecords.size === 0) {
+      throw new Error("No predictions were returned by the orchestrator.");
+    }
+
+    state.records.clear();
+    nextRecords.forEach((record, id) => {
+      state.records.set(id, record);
+    });
+    state.errors.clear();
+
+    return nextRecords.size;
+  }
+
+  function cachedRecordCount() {
+    return Array.from(state.records.values()).filter((record) => record.fromCache).length;
+  }
+
+  function setPredictionLoadStatus() {
+    const total = state.records.size;
+    const cached = cachedRecordCount();
+    const generated = Math.max(0, total - cached);
+
+    if (total === 0) return;
+
+    if (cached >= DEFAULT_COINS.length) {
+      setPipelineStatus("Loaded fresh cached predictions. No pipeline run needed.", "success");
+      return;
+    }
+
+    if (cached > 0) {
+      if (generated > 0) {
+        setPipelineStatus(`Loaded ${cached} fresh cached predictions and generated ${generated} missing or expired predictions.`, "success");
+      } else {
+        setPipelineStatus(`Loaded ${cached} fresh cached predictions. Missing or expired coins were not returned yet.`, "warning");
+      }
+      return;
+    }
+
+    setPipelineStatus("No fresh cached predictions were available. Prediction pipeline finished and cache was refreshed.", "success");
+  }
+
+  async function fetchCachedPredictions() {
+    try {
+      const response = await fetch(endpoint("/predict/all/cache"), { cache: "no-store" });
+      if (!response.ok) throw new Error(`Cache preflight returned ${response.status}`);
+
+      const payload = await response.json();
+      if (Object.keys(payload).length === 0) return 0;
+
+      const loaded = applyPredictionPayload(payload);
+      state.lastUpdatedAt = new Date();
+      await fetchLivePrices({ rerender: false });
+      updateLastUpdated();
+      render();
+      pollVisibleLivePrices();
+
+      return loaded;
+    } catch (error) {
+      console.warn("Prediction cache preflight failed", error);
+      return null;
+    }
+  }
+
   async function fetchLivePrices({ rerender = true } = {}) {
     if (state.records.size === 0) return;
 
@@ -382,36 +567,62 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     }
   }
 
-  async function fetchAllPredictions() {
-    renderSkeletonCards(6);
+  async function fetchAllPredictions({ showSkeleton = true } = {}) {
+    if (showSkeleton) renderSkeletonCards(6);
 
     try {
       const response = await fetch(endpoint("/predict/all"));
       if (!response.ok) throw new Error(`Orchestrator returned ${response.status}`);
 
       const payload = await response.json();
-      state.records.clear();
-      state.errors.clear();
-
-      Object.entries(payload).forEach(([coinId, result]) => {
-        const record = normalizeResult(coinId, result);
-        state.records.set(record.id, record);
-      });
-
-      if (state.records.size === 0) {
-        throw new Error("No predictions were returned by the orchestrator.");
-      }
+      applyPredictionPayload(payload);
 
       state.lastUpdatedAt = new Date();
       await fetchLivePrices({ rerender: false });
       updateLastUpdated();
       render();
+      pollVisibleLivePrices();
+      setPredictionLoadStatus();
     } catch (error) {
-      DEFAULT_COINS.forEach((coin) => {
-        state.errors.set(coin.id, error.message || "The prediction request failed.");
-      });
+      if (state.records.size === 0) {
+        DEFAULT_COINS.forEach((coin) => {
+          state.errors.set(coin.id, error.message || "The prediction request failed.");
+        });
+      }
+      setPipelineStatus(
+        state.records.size > 0
+          ? "Prediction load failed. Showing the fresh cached predictions already available."
+          : "Prediction load failed. No cached predictions were available.",
+        "warning"
+      );
       render();
     }
+  }
+
+  async function loadPredictions() {
+    renderSkeletonCards(6);
+    setPipelineStatus("Checking prediction cache...", "info");
+
+    const cachedCount = await fetchCachedPredictions();
+
+    if (cachedCount >= DEFAULT_COINS.length) {
+      setPredictionLoadStatus();
+      return;
+    }
+
+    if (cachedCount > 0) {
+      setPipelineStatus(`Showing ${cachedCount} fresh cached predictions. Running the pipeline for missing or expired coins...`, "warning");
+      await fetchAllPredictions({ showSkeleton: false });
+      return;
+    }
+
+    if (cachedCount === 0) {
+      setPipelineStatus("No fresh cached predictions found. Running the full prediction pipeline now...", "warning");
+    } else {
+      setPipelineStatus("Cache check was unavailable. Loading predictions now...", "warning");
+    }
+
+    await fetchAllPredictions({ showSkeleton: true });
   }
 
   async function refreshCoin(coinId) {
@@ -441,6 +652,7 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     } finally {
       state.loadingIds.delete(coinId);
       render();
+      pollVisibleLivePrices();
     }
   }
 
@@ -516,6 +728,10 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
       if (document.hidden) return;
       fetchLivePrices();
     }, 60000);
+
+    window.setInterval(() => {
+      pollVisibleLivePrices();
+    }, 5000);
   }
 
   function init() {
@@ -528,7 +744,7 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     }
 
     setupEvents();
-    fetchAllPredictions();
+    loadPredictions();
   }
 
   init();
