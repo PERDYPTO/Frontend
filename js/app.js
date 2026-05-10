@@ -30,7 +30,8 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     expandedId: null,
     filter: "all",
     sort: "confidence-desc",
-    lastUpdatedAt: null
+    lastUpdatedAt: null,
+    priceUpdatedAt: null
   };
 
   function escapeHtml(value) {
@@ -105,17 +106,11 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     return "neutral";
   }
 
-  function getSecondsUntilExpiry(record) {
-    const expiresTime = Date.parse(record.expiresAt);
-    if (Number.isFinite(expiresTime)) {
-      return Math.floor((expiresTime - Date.now()) / 1000);
-    }
-    return Number.isFinite(record.secondsUntilExpiry) ? record.secondsUntilExpiry : 900;
-  }
-
   function normalizeResult(coinId, result) {
     const prediction = result.prediction || result;
-    const current = Number(prediction.price_at_prediction);
+    const livePrice = result.current_price || result.price || null;
+    const priceAtPrediction = Number(prediction.price_at_prediction);
+    const current = Number(livePrice?.current_price ?? prediction.current_price ?? priceAtPrediction);
     const predicted15m = Number(prediction.predicted_15m);
     const predicted1h = Number(prediction.predicted_1h);
     const delta15m = predictionDelta(predicted15m, current);
@@ -127,8 +122,11 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
       symbol: prediction.symbol || coinLookup(id).symbol,
       name: prediction.name || coinLookup(id).name,
       currentPrice: current,
+      priceAtPrediction,
       priceChange24h: Number(prediction.price_change_24h),
       volume24h: Number(prediction.volume_24h),
+      priceSource: livePrice?.source || null,
+      priceTimestamp: livePrice?.timestamp || prediction.created_at,
       predicted15m,
       predicted1h,
       delta15m,
@@ -239,6 +237,7 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
           <div class="price-row">
             <div>
               <div class="current-price">${formatPrice(record.currentPrice)}</div>
+              <div class="last-updated">At prediction ${formatPrice(record.priceAtPrediction)}</div>
               <div class="last-updated">24h volume ${formatVolume(record.volume24h)}</div>
             </div>
             <span class="change-badge ${changeClass}">${Number.isFinite(record.priceChange24h) ? formatPercent(record.priceChange24h) : "24h N/A"}</span>
@@ -343,6 +342,46 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
     }
   }
 
+  function applyLivePrice(priceData) {
+    const id = priceData?.coin_id;
+    const record = state.records.get(id);
+    if (!record) return;
+
+    const current = Number(priceData.current_price);
+    if (Number.isFinite(current)) {
+      record.currentPrice = current;
+    }
+
+    record.priceChange24h = Number(priceData.price_change_24h);
+    record.volume24h = Number(priceData.volume_24h);
+    record.priceSource = priceData.source || record.priceSource;
+    record.priceTimestamp = priceData.timestamp || record.priceTimestamp;
+    record.delta15m = predictionDelta(record.predicted15m, record.currentPrice);
+    record.delta1h = predictionDelta(record.predicted1h, record.currentPrice);
+  }
+
+  async function fetchLivePrices({ rerender = true } = {}) {
+    if (state.records.size === 0) return;
+
+    try {
+      const response = await fetch(endpoint("/prices"), { cache: "no-store" });
+      if (!response.ok) throw new Error(`Price update returned ${response.status}`);
+
+      const payload = await response.json();
+      const prices = Array.isArray(payload) ? payload : payload.prices || [];
+      prices.forEach(applyLivePrice);
+
+      if (prices.length > 0) {
+        state.priceUpdatedAt = new Date();
+        state.lastUpdatedAt = state.priceUpdatedAt;
+        updateLastUpdated();
+        if (rerender) render();
+      }
+    } catch (error) {
+      console.warn("Live price update failed", error);
+    }
+  }
+
   async function fetchAllPredictions() {
     renderSkeletonCards(6);
 
@@ -364,6 +403,7 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
       }
 
       state.lastUpdatedAt = new Date();
+      await fetchLivePrices({ rerender: false });
       updateLastUpdated();
       render();
     } catch (error) {
@@ -474,12 +514,7 @@ const ORCHESTRATOR_URL = "https://perdypto-orchestrator.hf.space";
 
     window.setInterval(() => {
       if (document.hidden) return;
-
-      state.records.forEach((record) => {
-        if (getSecondsUntilExpiry(record) < 60) {
-          refreshCoin(record.id);
-        }
-      });
+      fetchLivePrices();
     }, 60000);
   }
 
