@@ -1,0 +1,17 @@
+name: Test Discord Reach
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Discord API
+        run: |
+          curl -s https://discord.com/api/v10/gateway
+          echo "Exit code: $?"
+      
+      - name: Test with Bot Token
+        run: |
+          curl -s -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
+          https://discord.com/api/v10/users/@me
