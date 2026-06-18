@@ -1,17 +1,64 @@
-name: Test Discord Reach
+name: Discord Proxy Tunnel
+
 on:
+  schedule:
+    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 jobs:
-  test:
+  run-proxy:
     runs-on: ubuntu-latest
+    timeout-minutes: 730
+    env:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      RECOVERY_URL: ${{ secrets.RECOVERY_URL }}
+      API_SECRET: ${{ secrets.API_SECRET }}
+    
     steps:
-      - name: Test Discord API
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install aiohttp
+
+      - name: Install cloudflared
         run: |
-          curl -s https://discord.com/api/v10/gateway
-          echo "Exit code: $?"
-      
-      - name: Test with Bot Token
+          wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+
+      - name: Start proxy server
+        run: nohup python proxy_server.py > server.log 2>&1 &
+
+      - name: Wait for server
+        run: sleep 3
+
+      - name: Start cloudflared tunnel
+        run: nohup cloudflared tunnel --url http://localhost:8080 --no-autoupdate > tunnel.log 2>&1 &
+
+      - name: Wait for tunnel
+        run: sleep 8
+
+      - name: Get Tunnel URL
         run: |
-          curl -s -H "Authorization: Bot ${{ secrets.DISCORD_BOT_TOKEN }}" \
-          https://discord.com/api/v10/users/@me
+          TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*.trycloudflare.com' tunnel.log | head -1)
+          if [ -z "$TUNNEL_URL" ]; then
+            sleep 5
+            TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*.trycloudflare.com' tunnel.log | head -1)
+          fi
+          echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
+          echo "Tunnel URL: $TUNNEL_URL"
+
+      - name: Update Recovery Space
+        run: |
+          curl -s -X POST "${{ env.RECOVERY_URL }}/internal/update-proxy" \
+            -H "Content-Type: application/json" \
+            -H "x-api-secret: ${{ env.API_SECRET }}" \
+            -d "{\"url\": \"$TUNNEL_URL\"}"
+
+      - name: Keep alive
+        run: sleep 43800
