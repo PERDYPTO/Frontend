@@ -24,7 +24,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install aiohttp
+        run: pip install curl_cffi
 
       - name: Install cloudflared
         run: |
