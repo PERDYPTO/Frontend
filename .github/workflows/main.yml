@@ -13,6 +13,7 @@ jobs:
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       RECOVERY_URL: ${{ secrets.RECOVERY_URL }}
       API_SECRET: ${{ secrets.API_SECRET }}
+      PROXY_API_KEY: ${{ secrets.PROXY_API_KEY }}
     
     steps:
       - name: Checkout repo
